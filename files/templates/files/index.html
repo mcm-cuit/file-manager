@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>MCM-CUIT 文件管理</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #f6f7f9;
+            color: #24292f;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        header {
+            height: 64px;
+            padding: 0 28px;
+            background: #fff;
+            border-bottom: 1px solid #d8dee4;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 28px auto;
+            padding: 0 24px;
+        }
+
+        .toolbar {
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        button {
+            padding: 7px 14px;
+            background: #fff;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #f3f4f6;
+        }
+
+        button.active {
+            background: #24292f;
+            color: #fff;
+            border-color: #24292f;
+        }
+
+        .panel {
+            min-height: 500px;
+            padding: 20px;
+            background: #fff;
+            border: 1px solid #d8dee4;
+            border-radius: 8px;
+        }
+
+        .tree ul {
+            margin: 0;
+            padding-left: 24px;
+            list-style: none;
+        }
+
+        .tree > ul {
+            padding-left: 0;
+        }
+
+        .tree li {
+            margin: 8px 0;
+        }
+
+        .directory {
+            font-weight: 500;
+        }
+
+        .file {
+            color: #57606a;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 11px 12px;
+            border-bottom: 1px solid #d8dee4;
+            text-align: left;
+        }
+
+        th {
+            color: #57606a;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .empty {
+            padding: 40px;
+            color: #6e7781;
+            text-align: center;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.hidden {
+            display: none;
+        }
+
+        .modal-mask {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, .35);
+        }
+
+        .modal-dialog {
+            position: relative;
+            width: 560px;
+            max-height: 80vh;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, .18);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #d8dee4;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            padding: 0;
+            border: 0;
+            background: none;
+            color: #57606a;
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            background: none;
+        }
+
+        .modal-body {
+            padding: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            padding: 14px 20px;
+            border-top: 1px solid #d8dee4;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group > label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .path-mode {
+            display: flex;
+            gap: 24px;
+            font-size: 14px;
+        }
+
+        .directory-picker {
+            max-height: 220px;
+            padding: 8px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            overflow-y: auto;
+        }
+
+        .directory-option {
+            padding: 7px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .directory-option:hover {
+            background: #f3f4f6;
+        }
+
+        .directory-option.selected {
+            background: #ddf4ff;
+            color: #0969da;
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 9px 10px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            outline: none;
+        }
+
+        .text-input:focus {
+            border-color: #0969da;
+        }
+
+        .final-path {
+            min-height: 38px;
+            padding: 9px 10px;
+            background: #f6f8fa;
+            border: 1px solid #d8dee4;
+            border-radius: 6px;
+            color: #57606a;
+            font-family: monospace;
+            overflow-wrap: anywhere;
+        }
+
+        .primary-button {
+            background: #24292f;
+            color: #fff;
+            border-color: #24292f;
+        }
+
+        .primary-button:hover {
+            background: #32383f;
+        }
+
+        .primary-button:disabled {
+            opacity: .6;
+            cursor: not-allowed;
+        }
+
+        .upload-error {
+            padding: 10px 12px;
+            background: #ffebe9;
+            border: 1px solid #ff8182;
+            border-radius: 6px;
+            color: #cf222e;
+            font-size: 14px;
+        }
+
+        .file-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-actions {
+            display: inline-flex;
+            gap: 6px;
+            margin-left: 8px;
+        }
+
+        .action-button {
+            padding: 3px 8px;
+            font-size: 12px;
+            color: #57606a;
+            background: #fff;
+            border: 1px solid #d0d7de;
+            border-radius: 5px;
+        }
+
+        .action-button:hover {
+            color: #24292f;
+            background: #f3f4f6;
+        }
+
+        .copy-success {
+            color: #1a7f37;
+        }
+
+        .title-area {
+            position: relative;
+        }
+
+        .title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .role-badges {
+            display: inline-flex;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .role-badge {
+            padding: 3px 8px;
+            background: #f6f8fa;
+            border: 1px solid #d0d7de;
+            border-radius: 12px;
+            color: #57606a;
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .role-badge.admin {
+            background: #fff1f0;
+            border-color: #ffccc7;
+            color: #cf1322;
+        }
+
+        .role-badge.staff {
+            background: #fff7e6;
+            border-color: #ffd591;
+            color: #ad6800;
+        }
+
+        .role-badge.developer {
+            background: #e6f4ff;
+            border-color: #91caff;
+            color: #0958d9;
+        }
+
+        .role-popover {
+            position: absolute;
+            top: 38px;
+            left: 0;
+            z-index: 100;
+            width: 300px;
+            padding: 16px;
+            background: #fff;
+            border: 1px solid #d0d7de;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(140, 149, 159, .2);
+        }
+
+        .role-popover-title {
+            margin-bottom: 9px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .role-popover-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .permission-title {
+            margin-top: 16px;
+        }
+
+        .permission-list {
+            color: #57606a;
+            font-size: 13px;
+            line-height: 1.9;
+        }
+
+        .role-help {
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid #d8dee4;
+            color: #6e7781;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .no-permission {
+            padding: 100px 20px;
+            text-align: center;
+        }
+
+        .no-permission-title {
+            margin-bottom: 12px;
+            color: #24292f;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .no-permission-text {
+            color: #6e7781;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+
+<body>
+<header>
+    <div class='title-area'>
+        <div class='title'>
+            MCM-CUIT 文件管理
+            <span id='roleBadges' class='role-badges'></span>
+        </div>
+
+        <div id='rolePopover' class='role-popover hidden'>
+            <div class='role-popover-title'>当前身份</div>
+            <div id='rolePopoverBadges' class='role-popover-badges'></div>
+
+            <div class='role-popover-title permission-title'>当前权限</div>
+            <div id='permissionList' class='permission-list'></div>
+
+            <div class='role-help'>
+                如需申请或调整权限，请在协会群内联系管理员。
+            </div>
+        </div>
+    </div>
+    <div class='user'>
+        <img id='avatar' alt=''>
+        <span id='username'></span>
+    </div>
+</header>
+
+<main>
+    <div class='toolbar'>
+        <button id='uploadButton'>上传文件</button>
+
+        <div>
+            <button id='treeButton' class='active'>树状</button>
+            <button id='tableButton'>表格</button>
+        </div>
+    </div>
+
+    <div class='panel'>
+        <div id='treeView' class='tree'></div>
+
+        <div id='tableView' class='hidden'>
+            <table>
+                <thead>
+                <tr>
+                    <th>文件名</th>
+                    <th>路径</th>
+                    <th>大小</th>
+                    <th>上传时间</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody id='fileTable'></tbody>
+            </table>
+        </div>
+    </div>
+</main>
+<!-- 上传文件弹窗：支持选择已有目录或输入自定义目录。 -->
+<div id='uploadModal' class='modal hidden'>
+    <div class='modal-mask' data-close-upload></div>
+
+    <div class='modal-dialog'>
+        <div class='modal-header'>
+            <div class='modal-title'>上传文件</div>
+            <button class='modal-close' data-close-upload>×</button>
+        </div>
+
+        <div class='modal-body'>
+            <div class='form-group'>
+                <label>文件</label>
+                <input id='fileInput' type='file'>
+            </div>
+
+            <div class='form-group'>
+                <label>上传路径</label>
+                <div class='path-mode'>
+                    <label><input type='radio' name='pathMode' value='existing' checked> 选择已有路径</label>
+                    <label><input type='radio' name='pathMode' value='custom'> 自定义路径</label>
+                </div>
+            </div>
+
+            <div id='existingPathPanel' class='form-group'>
+                <div id='directoryPicker' class='directory-picker'></div>
+            </div>
+
+            <div id='customPathPanel' class='form-group hidden'>
+                <input id='customPath' class='text-input' type='text' placeholder='例如：wiki/attachments/new-project/'>
+            </div>
+
+            <div class='form-group'>
+                <label>最终路径</label>
+                <div id='finalPath' class='final-path'>请选择文件和上传路径</div>
+            </div>
+
+            <div id='uploadError' class='upload-error hidden'></div>
+        </div>
+
+        <div class='modal-footer'>
+            <button data-close-upload>取消</button>
+            <button id='confirmUpload' class='primary-button'>上传</button>
+        </div>
+    </div>
+</div>
+<script>
+    let objects = null;
+    let selectedDirectory = '';
+
+    async function loadData() {
+        const userResponse = await fetch('/api/me');
+
+        if (!userResponse.ok) {
+            throw new Error('加载用户信息失败');
+        }
+
+        const user = await userResponse.json();
+
+        document.getElementById('username').textContent = user.username;
+        document.getElementById('avatar').src = user.github_avatar_url;
+        renderUserRoles(user);
+
+        const canViewFiles = user.is_superuser || user.is_staff || user.is_developer;
+        const canUploadFiles = user.is_superuser || user.is_developer;
+
+        document.getElementById('uploadButton').classList.toggle('hidden', !canUploadFiles);
+
+        if (!canViewFiles) {
+            document.querySelector('.toolbar').classList.add('hidden');
+            document.querySelector('.panel').innerHTML = `
+            <div class='no-permission'>
+                <div class='no-permission-title'>暂无文件管理权限</div>
+                <div class='no-permission-text'>
+                    当前账号为普通用户，无法查看或上传文件。<br>
+                    如需使用文件管理功能，请在协会群内联系管理员申请开发者权限。
+                </div>
+            </div>
+        `;
+            return;
+        }
+
+        const objectsResponse = await fetch('/api/objects');
+
+        if (!objectsResponse.ok) {
+            throw new Error('加载文件列表失败');
+        }
+
+        objects = await objectsResponse.json();
+        renderTree();
+        renderTable();
+    }
+
+    function openUploadModal() {
+        selectedDirectory = '';
+        document.getElementById('fileInput').value = '';
+        document.getElementById('customPath').value = '';
+        document.getElementById('uploadError').classList.add('hidden');
+        document.querySelector('input[name="pathMode"][value="existing"]').checked = true;
+        document.getElementById('existingPathPanel').classList.remove('hidden');
+        document.getElementById('customPathPanel').classList.add('hidden');
+
+        renderDirectoryPicker();
+        updateFinalPath();
+        document.getElementById('uploadModal').classList.remove('hidden');
+    }
+
+    function closeUploadModal() {
+        document.getElementById('uploadModal').classList.add('hidden');
+    }
+
+    function renderDirectoryPicker() {
+        const picker = document.getElementById('directoryPicker');
+        picker.innerHTML = '';
+
+        if (!objects.directories.length) {
+            picker.innerHTML = '<div class="empty">暂无已有路径，请使用自定义路径</div>';
+            return;
+        }
+
+        for (const directory of objects.directories) {
+            const option = document.createElement('div');
+            option.className = 'directory-option';
+            option.textContent = `📁 ${directory}`;
+
+            option.addEventListener('click', () => {
+                selectedDirectory = directory;
+                picker.querySelectorAll('.directory-option').forEach(item => item.classList.remove('selected'));
+                option.classList.add('selected');
+                updateFinalPath();
+            });
+
+            picker.appendChild(option);
+        }
+    }
+
+    function normalizeDirectory(path) {
+        path = path.trim().replaceAll('\\', '/').replace(/^\/+|\/+$/g, '');
+        return path ? `${path}/` : '';
+    }
+
+    function getUploadDirectory() {
+        const mode = document.querySelector('input[name="pathMode"]:checked').value;
+        return mode === 'existing' ? selectedDirectory : normalizeDirectory(document.getElementById('customPath').value);
+    }
+
+    function updateFinalPath() {
+        const file = document.getElementById('fileInput').files[0];
+        const directory = getUploadDirectory();
+        const finalPath = document.getElementById('finalPath');
+
+        if (!file) {
+            finalPath.textContent = directory || '请选择文件和上传路径';
+            return;
+        }
+
+        finalPath.textContent = `${directory}${file.name}`;
+    }
+
+    function showUploadError(message) {
+        const element = document.getElementById('uploadError');
+        element.textContent = message;
+        element.classList.remove('hidden');
+    }
+
+    async function uploadFile() {
+        const file = document.getElementById('fileInput').files[0];
+        const mode = document.querySelector('input[name="pathMode"]:checked').value;
+        const directory = getUploadDirectory();
+
+        if (!file) {
+            showUploadError('请选择文件');
+            return;
+        }
+
+        if (mode === 'existing' && !directory) {
+            showUploadError('请选择上传路径');
+            return;
+        }
+
+        const objectKey = `${directory}${file.name}`;
+        const button = document.getElementById('confirmUpload');
+
+        button.disabled = true;
+        button.textContent = '上传中...';
+        document.getElementById('uploadError').classList.add('hidden');
+
+        try {
+            const presignResponse = await fetch('/api/files/presign', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: JSON.stringify({
+                    object_key: objectKey,
+                    original_name: file.name,
+                    size: file.size,
+                    content_type: file.type || 'application/octet-stream',
+                }),
+            });
+
+            if (!presignResponse.ok) {
+                throw new Error(await getApiError(presignResponse, '申请上传地址失败'));
+            }
+
+            const presign = await presignResponse.json();
+
+            const uploadResponse = await fetch(presign.upload_url, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': file.type || 'application/octet-stream',
+                },
+                body: file,
+            });
+
+            if (!uploadResponse.ok) {
+                throw new Error(`文件上传失败 (${uploadResponse.status})`);
+            }
+
+            const completeResponse = await fetch('/api/files/complete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: JSON.stringify({
+                    upload_id: presign.upload_id,
+                }),
+            });
+
+            if (!completeResponse.ok) {
+                throw new Error(await getApiError(completeResponse, '确认上传失败'));
+            }
+
+            closeUploadModal();
+            await reloadObjects();
+        } catch (error) {
+            showUploadError(error.message);
+        } finally {
+            button.disabled = false;
+            button.textContent = '上传';
+        }
+    }
+
+    async function reloadObjects() {
+        const response = await fetch('/api/objects');
+
+        if (!response.ok) {
+            throw new Error('刷新文件列表失败');
+        }
+
+        objects = await response.json();
+        renderTree();
+        renderTable();
+    }
+
+    async function getApiError(response, fallback) {
+        try {
+            const data = await response.json();
+            return data.detail || data.message || fallback;
+        } catch {
+            return fallback;
+        }
+    }
+
+    function getCsrfToken() {
+        const name = 'csrftoken=';
+        const cookie = document.cookie.split(';').map(item => item.trim()).find(item => item.startsWith(name));
+        return cookie ? decodeURIComponent(cookie.substring(name.length)) : '';
+    }
+
+    // 将目录和当前用户可见文件构造成统一的树结构。
+    function buildTree() {
+        const root = {directories: {}, files: []};
+
+        for (const directory of objects.directories) {
+            const parts = directory.replace(/\/$/, '').split('/');
+            let node = root;
+
+            for (const part of parts) {
+                node.directories[part] ??= {directories: {}, files: []};
+                node = node.directories[part];
+            }
+        }
+
+        for (const file of objects.files) {
+            const parts = file.object_key.split('/');
+            const filename = parts.pop();
+            let node = root;
+
+            for (const part of parts) {
+                node.directories[part] ??= {directories: {}, files: []};
+                node = node.directories[part];
+            }
+
+            node.files.push({...file, filename});
+        }
+
+        return root;
+    }
+
+    function renderTreeNode(node) {
+        const ul = document.createElement('ul');
+
+        for (const [name, child] of Object.entries(node.directories).sort(([a], [b]) => a.localeCompare(b))) {
+            const li = document.createElement('li');
+
+            const directory = document.createElement('div');
+            directory.className = 'directory';
+            directory.textContent = `📁 ${name}`;
+            li.appendChild(directory);
+            li.appendChild(renderTreeNode(child));
+
+            ul.appendChild(li);
+        }
+
+        for (const file of node.files) {
+            const li = document.createElement('li');
+            const row = document.createElement('div');
+            row.className = 'file file-row';
+
+            const name = document.createElement('span');
+            name.textContent = `📄 ${file.filename}`;
+
+            row.appendChild(name);
+            row.appendChild(createFileActions(file));
+            li.appendChild(row);
+            ul.appendChild(li);
+        }
+
+        return ul;
+    }
+
+
+    function renderTree() {
+        const treeView = document.getElementById('treeView');
+        treeView.innerHTML = '';
+
+        const tree = buildTree();
+
+        if (!Object.keys(tree.directories).length && !tree.files.length) {
+            treeView.innerHTML = '<div class="empty">暂无文件</div>';
+            return;
+        }
+
+        treeView.appendChild(renderTreeNode(tree));
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('fileTable');
+        tbody.innerHTML = '';
+
+        for (const file of objects.files) {
+            const parts = file.object_key.split('/');
+            const filename = parts.pop();
+            const path = parts.length ? `${parts.join('/')}/` : '/';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+      <td>${escapeHtml(filename)}</td>
+      <td>${escapeHtml(path)}</td>
+      <td>${formatSize(file.size)}</td>
+      <td>${new Date(file.created_at).toLocaleString()}</td>
+    `;
+
+            const actions = document.createElement('td');
+            actions.appendChild(createFileActions(file));
+            tr.appendChild(actions);
+
+            tbody.appendChild(tr);
+        }
+    }
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
+        if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+        return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+    }
+
+    function escapeHtml(value) {
+        const div = document.createElement('div');
+        div.textContent = value;
+        return div.innerHTML;
+    }
+
+    document.getElementById('treeButton').addEventListener('click', () => {
+        document.getElementById('treeView').classList.remove('hidden');
+        document.getElementById('tableView').classList.add('hidden');
+        document.getElementById('treeButton').classList.add('active');
+        document.getElementById('tableButton').classList.remove('active');
+    });
+
+    document.getElementById('tableButton').addEventListener('click', () => {
+        document.getElementById('treeView').classList.add('hidden');
+        document.getElementById('tableView').classList.remove('hidden');
+        document.getElementById('treeButton').classList.remove('active');
+        document.getElementById('tableButton').classList.add('active');
+    });
+    document.getElementById('uploadButton').addEventListener('click', openUploadModal);
+    document.getElementById('confirmUpload').addEventListener('click', uploadFile);
+    document.getElementById('fileInput').addEventListener('change', updateFinalPath);
+    document.getElementById('customPath').addEventListener('input', updateFinalPath);
+
+    document.querySelectorAll('[data-close-upload]').forEach(element => {
+        element.addEventListener('click', closeUploadModal);
+    });
+
+    document.querySelectorAll('input[name="pathMode"]').forEach(element => {
+        element.addEventListener('change', event => {
+            const existing = event.target.value === 'existing';
+            document.getElementById('existingPathPanel').classList.toggle('hidden', !existing);
+            document.getElementById('customPathPanel').classList.toggle('hidden', existing);
+            updateFinalPath();
+        });
+    });
+    document.getElementById('roleBadges').addEventListener('click', event => {
+        event.stopPropagation();
+        document.getElementById('rolePopover').classList.toggle('hidden');
+    });
+
+    document.getElementById('rolePopover').addEventListener('click', event => {
+        event.stopPropagation();
+    });
+
+    document.addEventListener('click', () => {
+        document.getElementById('rolePopover').classList.add('hidden');
+    });
+
+    loadData().catch(error => {
+        console.error(error);
+        document.querySelector('.panel').innerHTML = '<div class="empty">加载失败</div>';
+    });
+
+    // 根据文件类型生成 Markdown，并提供 URL / Markdown 复制功能。
+    function getFileMarkdown(file) {
+        const name = file.original_name;
+        return file.content_type.startsWith('image/')
+            ? `![${name}](${file.url})`
+            : `[${name}](${file.url})`;
+    }
+
+    async function copyText(text, button) {
+        try {
+            await navigator.clipboard.writeText(text);
+
+            const originalText = button.textContent;
+            button.textContent = '已复制';
+            button.classList.add('copy-success');
+
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('copy-success');
+            }, 1200);
+        } catch (error) {
+            console.error('复制失败', error);
+        }
+    }
+
+    function createFileActions(file) {
+        const actions = document.createElement('span');
+        actions.className = 'file-actions';
+
+        const markdownButton = document.createElement('button');
+        markdownButton.className = 'action-button';
+        markdownButton.textContent = '复制 Markdown';
+        markdownButton.addEventListener('click', () => copyText(getFileMarkdown(file), markdownButton));
+
+        const urlButton = document.createElement('button');
+        urlButton.className = 'action-button';
+        urlButton.textContent = '复制 URL';
+        urlButton.addEventListener('click', () => copyText(file.url, urlButton));
+
+        actions.append(markdownButton, urlButton);
+        return actions;
+    }
+
+    function renderUserRoles(user) {
+        const badges = [];
+        const permissions = [];
+
+        if (user.is_superuser) {
+            badges.push({name: '超级管理员', className: 'admin'});
+            permissions.push('查看所有文件', '上传文件', `进入 ${window.location.origin}/admin/ 管理系统和用户`);
+        } else {
+            if (user.is_staff) {
+                badges.push({name: '工作人员', className: 'staff'});
+                permissions.push('查看所有文件');
+            }
+            if (user.is_developer) {
+                badges.push({name: '开发者', className: 'developer'});
+                permissions.push('上传文件');
+
+                if (!user.is_staff) {
+                    permissions.push('查看自己上传的文件', '查看所有文件夹名称');
+                }
+            }
+        }
+        if (!badges.length) {
+            badges.push({name: '普通用户', className: ''});
+            permissions.push('当前没有文件上传与查看权限');
+        }
+
+        const roleBadges = document.getElementById('roleBadges');
+        const popoverBadges = document.getElementById('rolePopoverBadges');
+
+        roleBadges.innerHTML = '';
+        popoverBadges.innerHTML = '';
+
+        for (const badge of badges) {
+            const headerBadge = document.createElement('span');
+            headerBadge.className = `role-badge ${badge.className}`;
+            headerBadge.textContent = badge.name;
+            roleBadges.appendChild(headerBadge);
+
+            const popoverBadge = headerBadge.cloneNode(true);
+            popoverBadges.appendChild(popoverBadge);
+        }
+
+        document.getElementById('permissionList').innerHTML =
+            permissions.map(permission => `<div>✓ ${escapeHtml(permission)}</div>`).join('');
+    }
+</script>
+</body>
+</html>
