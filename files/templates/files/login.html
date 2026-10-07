@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - MCM-CUIT 文件管理</title>
+</head>
+<body>
+<h1>MCM-CUIT 文件管理</h1>
+<p>
+    本系统用于成都信息工程大学学生数学建模协会相关项目的文件存储与管理，为 Wiki 等项目提供图片、附件、数据集等静态资源托管。
+    <br><br>
+    由于 Wiki 主要使用 Markdown 编写，将大量图片及其他资源文件直接存入 Git 仓库会显著增加仓库体积，影响 clone、pull
+    等操作效率。同时，Wiki 中还需要使用电子书、PDF、PPT、论文、压缩包及数据集等体积较大的文件，这类资源并不适合直接通过 Git
+    进行管理，也会占用大量服务器存储空间。
+    <br><br>
+    因此，强烈建议 Wiki 仓库仅保存 Markdown、配置文件等必要的项目文件。图片、文档、数据集及其他静态资源请通过本系统上传，上传完成后复制对应的
+    Markdown 引用，并直接粘贴至 Wiki 的 Markdown 文档中即可。
+    <br><br>
+    系统使用 GitHub
+    账号登录，并根据账号身份分配不同的文件访问与管理权限。开发者可以上传文件并查看自己上传的文件，工作人员可以查看全部文件，普通用户暂不开放文件管理权限。如需申请开发者权限或调整账号权限，请在协会群内联系管理员。
+    <br><br>
+    如果你对本系统有任何建议，或希望参与开发，可以前往
+    <a href='https://github.com/mcm-cuit/file-manager' target='_blank' rel='noopener noreferrer'>GitHub 项目仓库</a>。
+</p>
+<a href="{% url 'github_login' %}">使用 GitHub 登录</a>
+</body>
+</html>
