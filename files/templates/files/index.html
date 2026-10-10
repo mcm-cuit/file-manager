@@ -424,6 +424,38 @@
             font-size: 14px;
             line-height: 1.8;
         }
+
+        /* 批量上传进度条 */
+        .upload-progress {
+            margin-top: 14px;
+        }
+
+        .upload-progress-info {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .upload-progress-track {
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .upload-progress-bar {
+            width: 0;
+            height: 100%;
+            background: #2563eb;
+            border-radius: 4px;
+            transition: width 0.2s ease;
+        }
+
+        #uploadError {
+            white-space: pre-wrap;
+        }
     </style>
 </head>
 
@@ -495,7 +527,7 @@
         <div class='modal-body'>
             <div class='form-group'>
                 <label>文件</label>
-                <input id='fileInput' type='file'>
+                <input type="file" id="fileInput" multiple>
             </div>
 
             <div class='form-group'>
@@ -518,7 +550,15 @@
                 <label>最终路径</label>
                 <div id='finalPath' class='final-path'>请选择文件和上传路径</div>
             </div>
-
+            <div id="uploadProgress" class="upload-progress hidden">
+                <div class="upload-progress-info">
+                    <span id="uploadProgressText">准备上传</span>
+                    <span id="uploadProgressPercent">0%</span>
+                </div>
+                <div class="upload-progress-track">
+                    <div id="uploadProgressBar" class="upload-progress-bar"></div>
+                </div>
+            </div>
             <div id='uploadError' class='upload-error hidden'></div>
         </div>
 
@@ -587,6 +627,11 @@
         renderDirectoryPicker();
         updateFinalPath();
         document.getElementById('uploadModal').classList.remove('hidden');
+
+        document.getElementById('uploadProgress').classList.add('hidden');
+        document.getElementById('uploadProgressBar').style.width = '0%';
+        document.getElementById('uploadProgressText').textContent = '准备上传';
+        document.getElementById('uploadProgressPercent').textContent = '0%';
     }
 
     function closeUploadModal() {
@@ -629,16 +674,20 @@
     }
 
     function updateFinalPath() {
-        const file = document.getElementById('fileInput').files[0];
+        const files = Array.from(document.getElementById('fileInput').files);
         const directory = getUploadDirectory();
         const finalPath = document.getElementById('finalPath');
 
-        if (!file) {
+        if (!files.length) {
             finalPath.textContent = directory || '请选择文件和上传路径';
             return;
         }
 
-        finalPath.textContent = `${directory}${file.name}`;
+        if (files.length === 1) {
+            finalPath.textContent = `${directory}${files[0].name}`;
+            return;
+        }
+        finalPath.textContent = `${directory}（共 ${files.length} 个文件）`;
     }
 
     function showUploadError(message) {
@@ -647,12 +696,13 @@
         element.classList.remove('hidden');
     }
 
+    // 顺序上传多个文件，并按已处理文件数量更新进度。
     async function uploadFile() {
-        const file = document.getElementById('fileInput').files[0];
+        const files = Array.from(document.getElementById('fileInput').files);
         const mode = document.querySelector('input[name="pathMode"]:checked').value;
         const directory = getUploadDirectory();
 
-        if (!file) {
+        if (!files.length) {
             showUploadError('请选择文件');
             return;
         }
@@ -662,63 +712,95 @@
             return;
         }
 
-        const objectKey = `${directory}${file.name}`;
         const button = document.getElementById('confirmUpload');
+        const progress = document.getElementById('uploadProgress');
+        const progressBar = document.getElementById('uploadProgressBar');
+        const progressText = document.getElementById('uploadProgressText');
+        const progressPercent = document.getElementById('uploadProgressPercent');
+        const errors = [];
+        let success = 0;
 
         button.disabled = true;
         button.textContent = '上传中...';
+        progress.classList.remove('hidden');
+        progressBar.style.width = '0%';
+        progressPercent.textContent = '0%';
         document.getElementById('uploadError').classList.add('hidden');
 
+
         try {
-            const presignResponse = await fetch('/api/files/presign', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken(),
-                },
-                body: JSON.stringify({
-                    object_key: objectKey,
-                    original_name: file.name,
-                    size: file.size,
-                    content_type: file.type || 'application/octet-stream',
-                }),
-            });
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const objectKey = `${directory}${file.name}`;
+                const contentType = file.type || 'application/octet-stream';
 
-            if (!presignResponse.ok) {
-                throw new Error(await getApiError(presignResponse, '申请上传地址失败'));
+                progressText.textContent = `正在上传 ${i + 1}/${files.length}：${file.name}`;
+
+                try {
+                    const presignResponse = await fetch('/api/files/presign', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken(),
+                        },
+                        body: JSON.stringify({
+                            object_key: objectKey,
+                            original_name: file.name,
+                            size: file.size,
+                            content_type: contentType,
+                        }),
+                    });
+
+                    if (!presignResponse.ok) {
+                        throw new Error(await getApiError(presignResponse, '申请上传地址失败'));
+                    }
+
+                    const presign = await presignResponse.json();
+
+                    const uploadResponse = await fetch(presign.upload_url, {
+                        method: 'PUT',
+                        headers: {'Content-Type': contentType},
+                        body: file,
+                    });
+
+                    if (!uploadResponse.ok) {
+                        throw new Error(`文件上传失败 (${uploadResponse.status})`);
+                    }
+
+                    const completeResponse = await fetch('/api/files/complete', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken(),
+                        },
+                        body: JSON.stringify({upload_id: presign.upload_id}),
+                    });
+
+                    if (!completeResponse.ok) {
+                        throw new Error(await getApiError(completeResponse, '确认上传失败'));
+                    }
+
+                    success++;
+                } catch (error) {
+                    errors.push(`${file.name}：${error.message}`);
+                }
+
+                const percent = Math.round((i + 1) / files.length * 100);
+                progressBar.style.width = `${percent}%`;
+                progressPercent.textContent = `${percent}%`;
             }
 
-            const presign = await presignResponse.json();
+            progressText.textContent = `上传完成：成功 ${success} 个，失败 ${errors.length} 个`;
 
-            const uploadResponse = await fetch(presign.upload_url, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': file.type || 'application/octet-stream',
-                },
-                body: file,
-            });
-
-            if (!uploadResponse.ok) {
-                throw new Error(`文件上传失败 (${uploadResponse.status})`);
+            if (errors.length) {
+                showUploadError(errors.join('\n'));
+            } else {
+                closeUploadModal();
             }
 
-            const completeResponse = await fetch('/api/files/complete', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken(),
-                },
-                body: JSON.stringify({
-                    upload_id: presign.upload_id,
-                }),
-            });
-
-            if (!completeResponse.ok) {
-                throw new Error(await getApiError(completeResponse, '确认上传失败'));
+            if (success > 0) {
+                await reloadObjects();
             }
-
-            closeUploadModal();
-            await reloadObjects();
         } catch (error) {
             showUploadError(error.message);
         } finally {
